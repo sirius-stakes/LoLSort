@@ -1,13 +1,18 @@
 import { useMemo, useState } from 'react'
-import { ALL_SKILLS } from '../data/champions'
+import { ALL_SKILLS, CHAMPIONS } from '../data/champions'
 import {
   RANKING_METRICS,
+  buildChampionVersatilityRanking,
   buildEffectRanking,
   isUncleansableCc,
+  type ChampionVersatilityEntry,
+  type RankingEntry,
   type RankingMetric,
 } from '../utils/skillAnalysis'
 import { SKILL_KEY_STYLES, TARGET_TYPE_META } from '../features/skillSearch/meta'
+import { EffectBadge } from '../features/skillSearch/EffectBadge'
 import { SparkIcon } from './Icons'
+import type { ChampionProfile } from '../types/champion'
 import type { SkillItem } from '../types/skill'
 
 function rankBadgeClass(rank: number): string {
@@ -48,12 +53,65 @@ function cleanseBadge(skill: SkillItem): { label: string; className: string } {
   }
 }
 
+/** チャンピオンの所属レーン（なければ Data Dragon のロール）を表示する */
+function RoleBadges({ champion }: { champion: ChampionProfile }) {
+  const labels = champion.lanes.length > 0 ? champion.lanes : champion.roles
+
+  return (
+    <span
+      className="flex flex-wrap items-center gap-1"
+      title={`ロール: ${champion.roles.join(' / ')}`}
+    >
+      {labels.map((label) => (
+        <span
+          key={label}
+          className="rounded border border-[#C89B3C]/35 bg-[#C89B3C]/10 px-1.5 py-0.5 text-[9px] font-medium leading-none text-[#E4C784]"
+        >
+          {label}
+        </span>
+      ))}
+    </span>
+  )
+}
+
+function RankingEmptyState({ championMode }: { championMode: boolean }) {
+  return (
+    <div className="flex min-h-[240px] flex-col items-center justify-center rounded-xl border border-dashed border-[#785A28]/40 bg-[#091428]/40 px-6 text-center">
+      <div className="grid h-14 w-14 place-items-center rounded-full border border-[#785A28]/50 bg-[#0A1428] text-[#C89B3C]">
+        <SparkIcon className="h-6 w-6" />
+      </div>
+      <h3 className="mt-3 text-sm font-bold text-[#F0E6D2]">
+        {championMode
+          ? '集計できるチャンピオンがありません'
+          : 'この指標に該当するスキルがありません'}
+      </h3>
+      <p className="mt-1 max-w-sm text-[11px] leading-relaxed text-[#A09B8C]">
+        別の指標を選択してください。
+      </p>
+    </div>
+  )
+}
+
 export function EffectRankingTab() {
   const [metric, setMetric] = useState<RankingMetric>('hard_cc')
 
   const metricMeta = RANKING_METRICS.find((item) => item.id === metric) ?? RANKING_METRICS[0]
+  const isVersatility = metric === 'versatility'
 
-  const entries = useMemo(() => buildEffectRanking(ALL_SKILLS, metric, 10), [metric])
+  const skillEntries = useMemo<RankingEntry[]>(() => {
+    if (metric === 'versatility') return []
+    return buildEffectRanking(ALL_SKILLS, metric, 10)
+  }, [metric])
+
+  const championEntries = useMemo<ChampionVersatilityEntry[]>(
+    () =>
+      metric === 'versatility'
+        ? buildChampionVersatilityRanking(CHAMPIONS, 10)
+        : [],
+    [metric],
+  )
+
+  const entries = isVersatility ? championEntries : skillEntries
 
   const maxValue = entries[0]?.value ?? 1
 
@@ -69,11 +127,15 @@ export function EffectRankingTab() {
               </h2>
             </div>
             <p className="mt-1 text-[10px] leading-relaxed text-[#A09B8C]">
-              全チャンピオンのスキルから、指定した効果数値が大きい順に TOP10 を表示します。
+              {isVersatility
+                ? 'チャンピオンごとに P/Q/W/E/R の全効果を集約し、ユニークな効果の種類数が多い順に TOP10 を表示します。'
+                : '全チャンピオンのスキルから、指定した効果数値が大きい順に TOP10 を表示します。'}
             </p>
           </div>
           <span className="rounded-full border border-[#785A28]/40 bg-[#0A1428]/60 px-2.5 py-1 text-[9px] tabular-nums text-[#A09B8C]">
-            集計対象 {ALL_SKILLS.length} スキル
+            {isVersatility
+              ? `集計対象 ${CHAMPIONS.length} チャンピオン`
+              : `集計対象 ${ALL_SKILLS.length} スキル`}
           </span>
         </div>
 
@@ -121,7 +183,10 @@ export function EffectRankingTab() {
               </span>
             </div>
             <p className="mt-1 text-[10px] leading-relaxed text-[#A09B8C]">
-              {metricMeta.description}。同値の場合は効果時間が長いスキルを上位に表示します。
+              {metricMeta.description}。
+              {isVersatility
+                ? '同数の場合はハードCCの種類数が多いチャンピオンを上位に表示します。'
+                : '同値の場合は効果時間が長いスキルを上位に表示します。'}
             </p>
           </div>
 
@@ -131,110 +196,184 @@ export function EffectRankingTab() {
         </div>
 
         {entries.length > 0 ? (
-          <ol className="space-y-1.5">
-            {entries.map((entry, index) => {
-              const rank = index + 1
-              const skill = entry.skill
-              const targetMeta = TARGET_TYPE_META[skill.targetType]
-              const cleanse = cleanseBadge(skill)
-              const ratio = Math.max(6, Math.round((entry.value / maxValue) * 100))
+          isVersatility ? (
+            <ol className="space-y-1.5">
+              {championEntries.map((entry, index) => {
+                const rank = index + 1
+                const champion = entry.champion
+                const ratio = Math.max(
+                  6,
+                  Math.round((entry.value / maxValue) * 100),
+                )
 
-              return (
-                <li
-                  key={`${skill.id}-${entry.effectLabel}`}
-                  className={`card-enter relative overflow-hidden rounded-xl border px-3 py-2.5 transition sm:px-4 ${
-                    rank <= 3
-                      ? 'border-[#C89B3C]/40 bg-[#0F1923]/90'
-                      : 'border-[#785A28]/25 bg-[#0A1428]/70 hover:border-[#C89B3C]/45'
-                  }`}
-                >
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:flex-nowrap">
-                    <span
-                      className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border text-[13px] font-bold tabular-nums ${rankBadgeClass(rank)}`}
-                    >
-                      {rank}
-                    </span>
+                return (
+                  <li
+                    key={champion.championKey}
+                    className={`card-enter relative overflow-hidden rounded-xl border px-3 py-2.5 transition sm:px-4 ${
+                      rank <= 3
+                        ? 'border-[#C89B3C]/40 bg-[#0F1923]/90'
+                        : 'border-[#785A28]/25 bg-[#0A1428]/70 hover:border-[#C89B3C]/45'
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:flex-nowrap">
+                      <span
+                        className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border text-[13px] font-bold tabular-nums ${rankBadgeClass(rank)}`}
+                      >
+                        {rank}
+                      </span>
 
-                    <img
-                      src={skill.championIconUrl}
-                      alt={skill.championName}
-                      loading="lazy"
-                      onError={(event) => {
-                        event.currentTarget.src = '/hex.svg'
-                      }}
-                      className="h-10 w-10 shrink-0 rounded-full border border-[#C89B3C]/50 bg-[#0A1428] object-cover"
-                    />
+                      <img
+                        src={champion.championIconUrl}
+                        alt={champion.championName}
+                        loading="lazy"
+                        onError={(event) => {
+                          event.currentTarget.src = '/hex.svg'
+                        }}
+                        className="h-10 w-10 shrink-0 rounded-full border border-[#C89B3C]/50 bg-[#0A1428] object-cover"
+                      />
 
-                    <div className="min-w-0 flex-1 basis-[150px]">
-                      <div className="flex items-center gap-1.5">
-                        <span className="truncate text-xs font-bold text-[#F0E6D2]">
-                          {skill.championName}
-                        </span>
+                      <div className="min-w-0 flex-1 basis-[150px]">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="truncate text-xs font-bold text-[#F0E6D2]">
+                            {champion.championName}
+                          </span>
+                          <RoleBadges champion={champion} />
+                        </div>
+                        <p className="truncate text-[10px] text-[#C7C1B4]">
+                          全スキル（P/Q/W/E/R）総合
+                        </p>
+                      </div>
+
+                      <div className="min-w-[132px] shrink-0 text-right sm:min-w-[150px]">
                         <span
-                          className={`grid h-5 w-5 shrink-0 place-items-center rounded border text-[10px] font-bold ${SKILL_KEY_STYLES[skill.key]}`}
+                          className={`text-xl font-bold tabular-nums sm:text-2xl ${
+                            rank === 1 ? 'text-[#F5D793]' : 'text-[#E4C784]'
+                          }`}
                         >
-                          {skill.key}
+                          {entry.displayValue}
+                        </span>
+                        <span className="mt-0.5 block truncate text-[9px] text-[#A09B8C]">
+                          ユニーク効果 / ハードCC {entry.hardCcCount} 種
                         </span>
                       </div>
-                      <p className="truncate text-[10px] text-[#C7C1B4]">{skill.name}</p>
                     </div>
 
-                    <div className="flex shrink-0 flex-wrap items-center gap-1">
-                      <span
-                        className={`rounded border px-1.5 py-0.5 text-[9px] leading-none ${targetMeta.badge}`}
-                      >
-                        {targetMeta.label}
-                      </span>
-                      <span
-                        className={`rounded border px-1.5 py-0.5 text-[9px] leading-none ${cleanse.className}`}
-                      >
-                        {cleanse.label}
-                      </span>
-                    </div>
-
-                    <div className="min-w-[112px] shrink-0 text-right sm:min-w-[132px]">
-                      <span
-                        className={`text-xl font-bold tabular-nums sm:text-2xl ${
-                          rank === 1 ? 'text-[#F5D793]' : 'text-[#E4C784]'
+                    <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[#010A13]">
+                      <div
+                        className={`h-full rounded-full ${
+                          rank === 1
+                            ? 'bg-gradient-to-r from-[#785A28] via-[#C89B3C] to-[#FFF0C2]'
+                            : 'bg-gradient-to-r from-[#785A28]/70 to-[#C89B3C]/80'
                         }`}
-                      >
-                        {entry.displayValue}
-                      </span>
-                      <span className="mt-0.5 block truncate text-[9px] text-[#A09B8C]">
-                        {entry.effectLabel}
-                        {entry.note && entry.note !== entry.effectLabel
-                          ? ` / ${entry.note}`
-                          : ''}
-                      </span>
+                        style={{ width: `${ratio}%` }}
+                      />
                     </div>
-                  </div>
 
-                  <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[#010A13]">
-                    <div
-                      className={`h-full rounded-full ${
-                        rank === 1
-                          ? 'bg-gradient-to-r from-[#785A28] via-[#C89B3C] to-[#FFF0C2]'
-                          : 'bg-gradient-to-r from-[#785A28]/70 to-[#C89B3C]/80'
-                      }`}
-                      style={{ width: `${ratio}%` }}
-                    />
-                  </div>
-                </li>
-              )
-            })}
-          </ol>
+                    <div className="mt-2 flex flex-wrap gap-1.5 border-t border-[#785A28]/20 pt-2">
+                      {entry.uniqueEffects.map((effect) => (
+                        <EffectBadge key={effect.id} effect={effect} />
+                      ))}
+                    </div>
+                  </li>
+                )
+              })}
+            </ol>
+          ) : (
+            <ol className="space-y-1.5">
+              {skillEntries.map((entry, index) => {
+                const rank = index + 1
+                const skill = entry.skill
+                const targetMeta = TARGET_TYPE_META[skill.targetType]
+                const cleanse = cleanseBadge(skill)
+                const ratio = Math.max(6, Math.round((entry.value / maxValue) * 100))
+
+                return (
+                  <li
+                    key={`${skill.id}-${entry.effectLabel}`}
+                    className={`card-enter relative overflow-hidden rounded-xl border px-3 py-2.5 transition sm:px-4 ${
+                      rank <= 3
+                        ? 'border-[#C89B3C]/40 bg-[#0F1923]/90'
+                        : 'border-[#785A28]/25 bg-[#0A1428]/70 hover:border-[#C89B3C]/45'
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:flex-nowrap">
+                      <span
+                        className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border text-[13px] font-bold tabular-nums ${rankBadgeClass(rank)}`}
+                      >
+                        {rank}
+                      </span>
+
+                      <img
+                        src={skill.championIconUrl}
+                        alt={skill.championName}
+                        loading="lazy"
+                        onError={(event) => {
+                          event.currentTarget.src = '/hex.svg'
+                        }}
+                        className="h-10 w-10 shrink-0 rounded-full border border-[#C89B3C]/50 bg-[#0A1428] object-cover"
+                      />
+
+                      <div className="min-w-0 flex-1 basis-[150px]">
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate text-xs font-bold text-[#F0E6D2]">
+                            {skill.championName}
+                          </span>
+                          <span
+                            className={`grid h-5 w-5 shrink-0 place-items-center rounded border text-[10px] font-bold ${SKILL_KEY_STYLES[skill.key]}`}
+                          >
+                            {skill.key}
+                          </span>
+                        </div>
+                        <p className="truncate text-[10px] text-[#C7C1B4]">{skill.name}</p>
+                      </div>
+
+                      <div className="flex shrink-0 flex-wrap items-center gap-1">
+                        <span
+                          className={`rounded border px-1.5 py-0.5 text-[9px] leading-none ${targetMeta.badge}`}
+                        >
+                          {targetMeta.label}
+                        </span>
+                        <span
+                          className={`rounded border px-1.5 py-0.5 text-[9px] leading-none ${cleanse.className}`}
+                        >
+                          {cleanse.label}
+                        </span>
+                      </div>
+
+                      <div className="min-w-[112px] shrink-0 text-right sm:min-w-[132px]">
+                        <span
+                          className={`text-xl font-bold tabular-nums sm:text-2xl ${
+                            rank === 1 ? 'text-[#F5D793]' : 'text-[#E4C784]'
+                          }`}
+                        >
+                          {entry.displayValue}
+                        </span>
+                        <span className="mt-0.5 block truncate text-[9px] text-[#A09B8C]">
+                          {entry.effectLabel}
+                          {entry.note && entry.note !== entry.effectLabel
+                            ? ` / ${entry.note}`
+                            : ''}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[#010A13]">
+                      <div
+                        className={`h-full rounded-full ${
+                          rank === 1
+                            ? 'bg-gradient-to-r from-[#785A28] via-[#C89B3C] to-[#FFF0C2]'
+                            : 'bg-gradient-to-r from-[#785A28]/70 to-[#C89B3C]/80'
+                        }`}
+                        style={{ width: `${ratio}%` }}
+                      />
+                    </div>
+                  </li>
+                )
+              })}
+            </ol>
+          )
         ) : (
-          <div className="flex min-h-[240px] flex-col items-center justify-center rounded-xl border border-dashed border-[#785A28]/40 bg-[#091428]/40 px-6 text-center">
-            <div className="grid h-14 w-14 place-items-center rounded-full border border-[#785A28]/50 bg-[#0A1428] text-[#C89B3C]">
-              <SparkIcon className="h-6 w-6" />
-            </div>
-            <h3 className="mt-3 text-sm font-bold text-[#F0E6D2]">
-              この指標に該当するスキルがありません
-            </h3>
-            <p className="mt-1 max-w-sm text-[11px] leading-relaxed text-[#A09B8C]">
-              別の指標を選択してください。
-            </p>
-          </div>
+          <RankingEmptyState championMode={isVersatility} />
         )}
       </section>
     </div>

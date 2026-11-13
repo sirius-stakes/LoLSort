@@ -1,4 +1,10 @@
-import type { EffectDetail, SkillItem, SkillKey } from '../types/skill'
+import type { ChampionProfile } from '../types/champion'
+import type {
+  EffectCategory,
+  EffectDetail,
+  SkillItem,
+  SkillKey,
+} from '../types/skill'
 
 /* ------------------------------------------------------------------ */
 /* CC 判定                                                             */
@@ -76,11 +82,11 @@ export function formatSeconds(seconds: number): string {
 /* ランキング                                                          */
 /* ------------------------------------------------------------------ */
 
-export type RankingMetric =
-  | 'hard_cc'
-  | 'slow'
-  | 'defense_shred'
-  | 'attack_speed_shred'
+/** スキル単体の数値ランキング指標 */
+export type SkillRankingMetric = 'hard_cc' | 'slow' | 'defense_shred'
+
+/** ランキング画面で選択できる指標 */
+export type RankingMetric = SkillRankingMetric | 'versatility'
 
 export interface RankingEntry {
   skill: SkillItem
@@ -121,10 +127,10 @@ export const RANKING_METRICS: Array<{
     unit: '%',
   },
   {
-    id: 'attack_speed_shred',
-    label: '攻撃速度（AS）低下',
-    description: 'マークスマン・アサシン対策になるAS低下',
-    unit: '%',
+    id: 'versatility',
+    label: '多機能チャンピオン（効果種類数）',
+    description: 'P/Q/W/E/R が持つユニークなバフ・デバフ・CC効果の種類数',
+    unit: '種類',
   },
 ]
 
@@ -168,7 +174,7 @@ function pickHardCcEffect(skill: SkillItem): EffectDetail | null {
 
 function buildEntry(
   skill: SkillItem,
-  metric: RankingMetric,
+  metric: SkillRankingMetric,
 ): RankingEntry | null {
   if (metric === 'hard_cc') {
     const effect = pickHardCcEffect(skill)
@@ -236,31 +242,13 @@ function buildEntry(
     }
   }
 
-  const effect = skill.effects.find(
-    (item) =>
-      item.id === 'attack_speed_shred' &&
-      extractPercent(item.valueText) !== null,
-  )
-  if (!effect) return null
-
-  const percent = extractPercent(effect.valueText) ?? 0
-
-  return {
-    skill,
-    effectLabel: effect.label,
-    value: percent,
-    displayValue: `${percent}% 低下`,
-    duration: effect.duration,
-    note: effect.duration
-      ? `${effect.duration.toFixed(1)}秒間 攻撃速度 ${percent}% 低下`
-      : `攻撃速度 ${percent}% 低下`,
-  }
+  return null
 }
 
-/** 指定指標のランキングを降順で返す */
+/** 指定指標のスキル単体ランキングを降順で返す */
 export function buildEffectRanking(
   skills: SkillItem[],
-  metric: RankingMetric,
+  metric: SkillRankingMetric,
   limit = 10,
 ): RankingEntry[] {
   return skills
@@ -271,6 +259,78 @@ export function buildEffectRanking(
         b.value - a.value ||
         (b.duration ?? 0) - (a.duration ?? 0) ||
         a.skill.championName.localeCompare(b.skill.championName, 'ja'),
+    )
+    .slice(0, limit)
+}
+
+/* ------------------------------------------------------------------ */
+/* 多機能チャンピオンランキング                                        */
+/* ------------------------------------------------------------------ */
+
+export interface ChampionVersatilityEntry {
+  champion: ChampionProfile
+  /** 重複を除いたユニークな効果一覧 */
+  uniqueEffects: EffectDetail[]
+  /** ユニークな効果の種類数 */
+  value: number
+  /** ユニークな hard_cc 効果の種類数（同数時のタイブレーク用） */
+  hardCcCount: number
+  /** 大きく表示する値テキスト */
+  displayValue: string
+}
+
+const EFFECT_CATEGORY_DISPLAY_ORDER: Record<EffectCategory, number> = {
+  hard_cc: 0,
+  soft_cc: 1,
+  buff: 2,
+  debuff: 3,
+}
+
+/**
+ * チャンピオン単位で P/Q/W/E/R の全効果を集約し、
+ * ユニークな効果の種類数が多い順に TOP N を返す。
+ *
+ * - 重複判定は effect.id を基準にする（Q と R の両方にスローがあっても1種類）
+ * - 種類数が同じ場合は hard_cc の種類数が多いチャンピオンを優先する
+ */
+export function buildChampionVersatilityRanking(
+  champions: ChampionProfile[],
+  limit = 10,
+): ChampionVersatilityEntry[] {
+  return champions
+    .map((champion) => {
+      const effectById = new Map<string, EffectDetail>()
+
+      for (const skill of champion.skills) {
+        for (const effect of skill.effects) {
+          if (!effectById.has(effect.id)) effectById.set(effect.id, effect)
+        }
+      }
+
+      const uniqueEffects = Array.from(effectById.values()).sort(
+        (a, b) =>
+          EFFECT_CATEGORY_DISPLAY_ORDER[a.category] -
+            EFFECT_CATEGORY_DISPLAY_ORDER[b.category] ||
+          a.label.localeCompare(b.label, 'ja'),
+      )
+      const hardCcCount = uniqueEffects.filter(
+        (effect) => effect.category === 'hard_cc',
+      ).length
+
+      return {
+        champion,
+        uniqueEffects,
+        value: uniqueEffects.length,
+        hardCcCount,
+        displayValue: `全 ${uniqueEffects.length} 種類`,
+      }
+    })
+    .filter((entry) => entry.value > 0)
+    .sort(
+      (a, b) =>
+        b.value - a.value ||
+        b.hardCcCount - a.hardCcCount ||
+        a.champion.championName.localeCompare(b.champion.championName, 'ja'),
     )
     .slice(0, limit)
 }
