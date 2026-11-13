@@ -71,6 +71,27 @@ function getSearchHaystack(skill: SkillItem): string {
   return SEARCH_HAYSTACK.get(skill.id) ?? buildSearchHaystack(skill)
 }
 
+/**
+ * 選択中の効果種別に対する一致判定。
+ * OR: 選択した種別のいずれかを持つ / AND: 選択した種別をすべて持つ。
+ *
+ * 比較対象は effect.category（EffectCategory）で統一している。
+ * effect.id / effect.label ではない点に注意。
+ */
+function matchesCategorySelection(
+  skillEffects: SkillItem['effects'],
+  selectedCategories: EffectCategory[],
+  matchMode: CategoryMatchMode,
+): boolean {
+  const presentCategories = new Set(
+    skillEffects.map((effect) => effect.category),
+  )
+
+  return matchMode === 'AND'
+    ? selectedCategories.every((category) => presentCategories.has(category))
+    : selectedCategories.some((category) => presentCategories.has(category))
+}
+
 export function useSkillFilters(skills: SkillItem[] = ALL_SKILLS) {
   const [filters, setFilters] = useState<SkillFilters>(INITIAL_FILTERS)
 
@@ -218,20 +239,15 @@ export function useSkillFilters(skills: SkillItem[] = ALL_SKILLS) {
         if (!matchesNoDamage && !matchesDamageType) return false
       }
 
-      if (filters.categories.length > 0) {
-        const skillCategories = new Set(
-          skill.effects.map((effect) => effect.category),
+      if (
+        filters.categories.length > 0 &&
+        !matchesCategorySelection(
+          skill.effects,
+          filters.categories,
+          filters.categoryMatchMode,
         )
-        // OR: 選択した種別のいずれか / AND: 選択した種別すべて
-        const matches =
-          filters.categoryMatchMode === 'AND'
-            ? filters.categories.every((category) =>
-                skillCategories.has(category),
-              )
-            : filters.categories.some((category) =>
-                skillCategories.has(category),
-              )
-        if (!matches) return false
+      ) {
+        return false
       }
 
       if (query) {
@@ -241,7 +257,22 @@ export function useSkillFilters(skills: SkillItem[] = ALL_SKILLS) {
 
       return true
     })
-  }, [skills, filters])
+    // categoryMatchMode を明示的に依存配列へ含める。
+    // filters 全体に依存すると将来の分割時に切り替えが反映されない事故を招くため、
+    // 絞り込みに使用するフィールドをすべて列挙する。
+  }, [
+    skills,
+    filters.search,
+    filters.categories,
+    filters.categoryMatchMode,
+    filters.skillKey,
+    filters.targetType,
+    filters.lanes,
+    filters.compositions,
+    filters.damageFilters,
+    filters.cleanseImmuneOnly,
+    filters.qssRequiredOnly,
+  ])
 
   const hasConditions =
     filters.search.trim().length > 0 ||

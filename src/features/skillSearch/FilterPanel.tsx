@@ -162,7 +162,11 @@ export function FilterPanel({
       <div>
         <SectionTitle hint="複数選択可">効果種別</SectionTitle>
 
-        <div className="mb-2 grid grid-cols-2 gap-1 rounded-lg border border-[#785A28]/40 bg-[#010A13]/70 p-1">
+        <div
+          role="group"
+          aria-label="効果種別の検索モード"
+          className="mb-2 grid grid-cols-2 gap-1 rounded-lg border border-[#785A28]/40 bg-[#010A13]/70 p-1"
+        >
           {(['OR', 'AND'] as const).map((mode) => {
             const active = filters.categoryMatchMode === mode
 
@@ -179,12 +183,16 @@ export function FilterPanel({
                 onClick={() => onCategoryMatchModeChange(mode)}
                 className={`rounded-md px-1.5 py-1.5 text-[10px] font-bold transition ${
                   active
-                    ? 'bg-[#C89B3C]/20 text-[#F5D793] shadow-[inset_0_0_0_1px_rgba(200,155,60,0.5)]'
-                    : 'text-[#A09B8C] hover:text-[#F0E6D2]'
+                    ? 'bg-[#C89B3C] text-[#091428] shadow-[0_0_10px_rgba(200,155,60,0.35)]'
+                    : 'text-[#A09B8C] hover:bg-[#C89B3C]/10 hover:text-[#F0E6D2]'
                 }`}
               >
                 {mode}検索
-                <span className="ml-0.5 text-[8px] font-normal opacity-70">
+                <span
+                  className={`ml-0.5 text-[8px] font-normal ${
+                    active ? 'text-[#091428]/75' : 'opacity-70'
+                  }`}
+                >
                   （{mode === 'AND' ? 'すべて含む' : 'いずれかを含む'}）
                 </span>
               </button>
