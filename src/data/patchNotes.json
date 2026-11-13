@@ -1,0 +1,52 @@
+{
+  "source": "cache",
+  "fetchedAt": "2026-11-10T06:39:04.960Z",
+  "gameVersion": "16.22.1",
+  "entries": [
+    {
+      "id": "patchNote.f9b9c125-2f9c-4d0c-b9cf-02b90d051ac6.ja-jp",
+      "title": "リーグ・オブ・レジェンド パッチノート 26.22",
+      "version": "26.22",
+      "publishedAt": "2026-11-03T19:00:00.000Z",
+      "url": "https://www.leagueoflegends.com/ja-jp/news/game-updates/league-of-legends-patch-26-22-notes",
+      "summary": "パッチ26.22がヒットチャートを席巻中！K/DAが炎を巻き起こし、メルには中規模アップデートが実施され、サモナーズリフト、メイヘム、クラシックに多くの変更が加えられます。",
+      "thumbnail": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/718b573bd914c3a8a334a89f70ff405eee9a6748-1920x1080.jpg?accountingTag=LoL"
+    },
+    {
+      "id": "patchNote.2d70ed59-50b9-46d7-8146-08aec3258d93.ja-jp",
+      "title": "パッチノート 26.21",
+      "version": "26.21",
+      "publishedAt": "2026-10-20T18:00:00.000Z",
+      "url": "https://www.leagueoflegends.com/ja-jp/news/game-updates/league-of-legends-patch-26-21-notes",
+      "summary": "True Damageが華々しく登場！さらに、サモナーズリフトやメイヘム、クラシックやアリーナにも注目コンテンツが待っています。",
+      "thumbnail": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/6d3f4fed564252b2e0145b179108675508cf5f19-1920x1080.jpg?accountingTag=LoL"
+    },
+    {
+      "id": "d1feeede-bde0-47e4-bb9c-b06921b070d6.ja-jp",
+      "title": "リーグ・オブ・レジェンド パッチノート 26.20",
+      "version": "26.20",
+      "publishedAt": "2026-10-06T18:00:00.000Z",
+      "url": "https://www.leagueoflegends.com/ja-jp/news/game-updates/league-of-legends-patch-26-20-notes",
+      "summary": "皆さんご注目！Worldsパッチの登場です！プロ向けの調整が多数行われ、クラシックにさらなるチャンピオンが追加され、HEARTSTEELがLive My Lifeします。",
+      "thumbnail": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/9b02404e478143a3313dbd374e938ced7d4f3826-1920x1080.jpg?accountingTag=LoL"
+    },
+    {
+      "id": "0ec98cab-47c6-4911-8aee-64a6a7364dbe.ja-jp",
+      "title": "パッチノート 26.19",
+      "version": "26.19",
+      "publishedAt": "2026-09-22T18:00:00.000Z",
+      "url": "https://www.leagueoflegends.com/ja-jp/news/game-updates/league-of-legends-patch-26-19-notes",
+      "summary": "Worldsが間もなく開催！クラシックにはさらなる「新」チャンピオンが登場し、アリーナには新たなオーグメントが追加されます！",
+      "thumbnail": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/42ec56c9308464c0c64034d6bcf691fdb14ad377-1920x1149.jpg?accountingTag=LoL"
+    },
+    {
+      "id": "b3cd12ec-4cf2-4531-854d-8a7951042fa9.ja-jp",
+      "title": "リーグ・オブ・レジェンド パッチノート 26.18",
+      "version": "26.18",
+      "publishedAt": "2026-09-09T18:00:00.000Z",
+      "url": "https://www.leagueoflegends.com/ja-jp/news/game-updates/league-of-legends-patch-26-18-notes",
+      "summary": "すべてあるべき場所に: CapsがHall of Legendsに選出され、デマーシアのチャンピオンたちもクラシックに帰ってきました。さらに、ランダムミッドメイヘムのオーグメントが適切なチャンピオンに付与されるようになりました！",
+      "thumbnail": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/edec00cb9c1e10eb5adace738fea068ded8361ac-1920x1117.jpg?accountingTag=LoL"
+    }
+  ]
+}

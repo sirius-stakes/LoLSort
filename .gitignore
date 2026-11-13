@@ -1,0 +1,17 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+
+# data fetch cache
+scripts/.cache/
+
+# local previews / screenshots
+shot-*.png
+.chrome-*/
+
+# misc
+.DS_Store
+*.local
+*.log
