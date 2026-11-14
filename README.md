@@ -8,7 +8,7 @@ Data Dragon（ja_JP）の日本語スキル名・説明・画像と、Meraki Ana
 
 ## 🌐 公開URL
 
-- 本番 URL: **（Vercel デプロイ後に追記予定）**
+- 本番 URL: https://lol-sort.vercel.app
 - リポジトリ: https://github.com/sirius-stakes/LoLSort
 
 ---
